@@ -1,1 +1,1 @@
-# Tripleten web_project_around_auth
+# Around the U.S. Auth
