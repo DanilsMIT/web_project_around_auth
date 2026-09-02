@@ -23,6 +23,7 @@ export default defineConfig([
         {
           properties: "always",
           ignoreDestructuring: true,
+          allow: ["_id"],
         },
       ],
     },

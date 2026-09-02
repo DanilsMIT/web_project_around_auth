@@ -1,21 +1,36 @@
 //react
 import { useEffect, useState } from "react";
+//Layout
+import AuthLayout from "./Layout/AuthLayout.jsx";
+import MainLayout from "./Layout/MainLayout.jsx";
 //components
-import Header from "./Header/Header.jsx";
 import ScreenLoader from "./ScreenLoader/ScreenLoader.jsx";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import API from "../utils/api.js";
+import Popup from "./Popup/Popup.jsx";
 import Main from "./Main/Main.jsx";
-import Footer from "./Footer/Footer.jsx";
+import Register from "./Auth/Register/Register.jsx";
+import Login from "./Auth/Login/Login.jsx";
+
 //contexto
 import { CurrentUserContext } from "../contexts/CurrentUserContext.js";
+//Ruta Protegida
+import ProtectedRoute from "./Auth/ProtectedRoute/ProtectedRoute.jsx";
+//Auth
+import * as auth from "../utils/auth.js";
+import InfoTooltip from "./popup/InfoTooltip/InfoTooltip.jsx";
+
 function App() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [popup, setPopup] = useState(null);
   const [cards, setCards] = useState([]);
   const [currentUser, setCurrentUser] = useState({});
 
+  //Login
+  const [isLogged, setIsLogged] = useState(false);
+
   //funciones
-  //popup
+  //Popup
   const handleOpenPopUp = (popup) => {
     setPopup(popup);
   };
@@ -24,7 +39,10 @@ function App() {
     setPopup(null);
   };
   //Hooks
-  //GET UserInfo - Cards
+  //Navegacion programatica
+  const navigate = useNavigate();
+
+  //GET UserInfo & Cards
   useEffect(() => {
     setIsLoading(true);
     Promise.all([API.getUserInfo(), API.getCards()])
@@ -35,104 +53,183 @@ function App() {
       .catch((error) => console.log(error))
       .finally(() => setIsLoading(false));
   }, []);
+  //Get Token
+  useEffect(() => {
+    const jwt = localStorage.getItem("jwt");
+
+    if (jwt) {
+      auth
+        .getToken(jwt)
+        .then((data) => {
+          if (data) {
+            setIsLogged(true);
+            navigate("/");
+          }
+        })
+        .catch((err) => {
+          console.log("Token invalido", err);
+          localStorage.removeItem("jwt");
+        });
+    }
+  }, []);
 
   //Funciones API
-  //User
-  //UPDATE UserInfo
-  const handleUpdateUser = (data) => {
-    (async () => {
-      await API.updateUserInfo(data)
-        .then((newData) => {
-          setCurrentUser(newData);
-          handleClosePopUp();
-        })
-        .catch((error) => console.error(error));
-    })();
-  };
-  //UPDATE avatar
-  const handleUpdateAvatar = (data) => {
-    (async () => {
-      await API.updateUserAvatar(data)
-        .then((newData) => {
-          setCurrentUser(newData);
-          handleClosePopUp();
-        })
-        .catch((error) => console.error(error));
-    })();
-  };
-  //Cards
-  //POST Card
-  async function handlePostCard(card) {
+  const handleUpdateUser = async (data) => {
     try {
-      const NewCard = await API.postCard(card);
-      setCards([NewCard, ...cards]);
+      const newData = await API.updateUserInfo(data);
+      setCurrentUser(newData);
       handleClosePopUp();
     } catch (error) {
-      console.log("Fallo algo al agregar carta: ", error);
+      console.error("Error al actualizar usuario:", error);
     }
-  }
+  };
 
-  //UPDATE Like Card
-  async function handleCardLike(card) {
-    //Revisa si hay like o no
-    const isLiked = card.isLiked;
-
+  const handleUpdateAvatar = async (data) => {
     try {
-      //La clase usa la API y esta devuelve la nueva carta actualizada
-      const UpdatedCard = await API.cardToggleLike(card._id, !isLiked);
+      const newData = await API.updateUserAvatar(data);
+      setCurrentUser(newData);
+      handleClosePopUp();
+    } catch (error) {
+      console.error("Error al actualizar avatar:", error);
+    }
+  };
 
-      //Devuelvo un nuevo arreglo, reemplazando una carta
+  const handlePostCard = async (card) => {
+    try {
+      const newCard = await API.postCard(card);
+      setCards([newCard, ...cards]);
+      handleClosePopUp();
+    } catch (error) {
+      console.error("Fallo al agregar carta:", error);
+    }
+  };
+
+  const handleCardLike = async (card) => {
+    const isLiked = card.isLiked;
+    try {
+      const updatedCard = await API.cardToggleLike(card._id, !isLiked);
       setCards((cards) =>
         cards.map((currentCard) =>
-          currentCard._id === UpdatedCard._id ? UpdatedCard : currentCard,
+          currentCard._id === updatedCard._id ? updatedCard : currentCard,
         ),
       );
     } catch (error) {
       console.error("Error al cambiar el like:", error);
     }
-  }
-  //DELETE card
-  async function handleCardDelete(card) {
+  };
+
+  const handleCardDelete = async (card) => {
     try {
-      //borro la carta de la API
       await API.cardDelete(card._id);
-      //Devuelvo un nuevo arreglo, tirando la vieja carta
-      setCards(
-        (cards) => cards.filter((currentCard) => currentCard._id != card._id),
-        handleClosePopUp(),
-      );
+      setCards((cards) => cards.filter((c) => c._id !== card._id));
+      handleClosePopUp();
     } catch (error) {
-      console.error("Error al cambiar eliminar :", error);
+      console.error("Error al eliminar carta:", error);
     }
-  }
+  };
+  //Funciones Auth
+  const showSucess = () => {
+    handleOpenPopUp({
+      title: "Aviso",
+      children: (
+        <InfoTooltip
+          isSuccess={true}
+          message="¡Correcto!, ya estas registrado"
+        />
+      ),
+    });
+  };
 
+  const showWrong = (
+    message = "Uy, algo salió mal. Por favor, inténtalo de nuevo.",
+  ) => {
+    handleOpenPopUp({
+      title: "Aviso",
+      children: <InfoTooltip isSuccess={false} message={message} />,
+    });
+  };
+
+  const handleRegister = async (email, password) => {
+    try {
+      await auth.register(email, password);
+      showSucess();
+    } catch (err) {
+      console.error("Error en registro:", err);
+
+      if (err.includes("400")) {
+        showWrong("Correo ya registrado");
+      } else {
+        showWrong();
+      }
+    }
+  };
+
+  const handleLogin = async (email, password) => {
+    try {
+      const data = await auth.login(email, password);
+      localStorage.setItem("jwt", data.token);
+      setIsLogged(true);
+      navigate("/");
+    } catch (err) {
+      console.error("Error en login:", err);
+
+      if (err.includes(401)) {
+        showWrong();
+      }
+    }
+  };
+  const handleLogOut = () => {
+    localStorage.removeItem("jwt");
+    setIsLogged(false);
+    navigate("/signin");
+  };
+
+  //renderizado
   return (
-    <>
-      <div className="page__content">
-        <Header />
-        {isLoading && <ScreenLoader />}
-        <CurrentUserContext.Provider
-          value={{
-            currentUser,
-            handleUpdateUser,
-            handleUpdateAvatar,
-          }}
-        >
-          <Main
-            handleOpenPopUp={handleOpenPopUp}
-            handleClosePopUp={handleClosePopUp}
-            popup={popup}
-            cards={cards}
-            handleCardLike={handleCardLike}
-            handleCardDelete={handleCardDelete}
-            //dado que este solo tiene un nivel para pasar la funcion
-            handlePostCard={handlePostCard}
-          />
-        </CurrentUserContext.Provider>
+    <CurrentUserContext.Provider
+      value={{
+        currentUser,
+        handleUpdateUser,
+        handleUpdateAvatar,
+        handleLogOut,
+      }}
+    >
+      {isLoading && <ScreenLoader />}
 
-        <Footer />
-      </div>
-    </>
+      <Routes>
+        <Route element={<MainLayout handleLogOut={handleLogOut} />}>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute isLogged={isLogged}>
+                <Main
+                  handleOpenPopUp={handleOpenPopUp}
+                  handleClosePopUp={handleClosePopUp}
+                  popup={popup}
+                  cards={cards}
+                  handleCardLike={handleCardLike}
+                  handleCardDelete={handleCardDelete}
+                  //dado que este solo tiene un nivel para pasar la funcion
+                  handlePostCard={handlePostCard}
+                />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+        <Route element={<AuthLayout />}>
+          <Route path="/signin" element={<Login handleLogin={handleLogin} />} />
+          <Route
+            path="/signup"
+            element={<Register handleRegister={handleRegister} />}
+          />
+        </Route>
+      </Routes>
+      {popup && (
+        <Popup title={popup.title} onClose={() => handleClosePopUp()}>
+          {popup.children}
+        </Popup>
+      )}
+    </CurrentUserContext.Provider>
   );
 }
 

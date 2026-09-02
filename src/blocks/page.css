@@ -3,7 +3,6 @@
 }
 
 .page__content {
-  padding: 0 40px;
   background-color: black;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;

@@ -78,11 +78,6 @@ export default function Main(propiedades) {
           ))}
         </ul>
       </section>
-      {popup && (
-        <Popup title={popup.title} onClose={() => handleClosePopUp()}>
-          {popup.children}
-        </Popup>
-      )}
     </main>
   );
 }
