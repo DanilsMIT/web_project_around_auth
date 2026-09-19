@@ -44,15 +44,17 @@ function App() {
 
   //GET UserInfo & Cards
   useEffect(() => {
-    setIsLoading(true);
-    Promise.all([API.getUserInfo(), API.getCards()])
-      .then(([userData, cardsData]) => {
-        setCurrentUser(userData);
-        setCards(cardsData);
-      })
-      .catch((error) => console.log(error))
-      .finally(() => setIsLoading(false));
-  }, []);
+    if (isLogged) {
+      setIsLoading(true);
+      Promise.all([API.getUserInfo(), API.getCards()])
+        .then(([userData, cardsData]) => {
+          setCurrentUser(userData);
+          setCards(cardsData);
+        })
+        .catch((error) => console.log(error))
+        .finally(() => setIsLoading(false));
+    }
+  }, [isLogged]);
   //Get Token
   useEffect(() => {
     const jwt = localStorage.getItem("jwt");
@@ -69,7 +71,10 @@ function App() {
         .catch((err) => {
           console.log("Token invalido", err);
           localStorage.removeItem("jwt");
-        });
+        })
+        .finally(setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
   }, []);
 
@@ -105,7 +110,7 @@ function App() {
   };
 
   const handleCardLike = async (card) => {
-    const isLiked = card.isLiked;
+    const isLiked = card.likes.some((id) => id === currentUser._id);
     try {
       const updatedCard = await API.cardToggleLike(card._id, !isLiked);
       setCards((cards) =>
@@ -156,7 +161,7 @@ function App() {
     } catch (err) {
       console.error("Error en registro:", err);
 
-      if (err.includes("400")) {
+      if (String(err).includes("400") || String(err).includes("409")) {
         showWrong("Correo ya registrado");
       } else {
         showWrong();
@@ -173,7 +178,7 @@ function App() {
     } catch (err) {
       console.error("Error en login:", err);
 
-      if (err.includes(401)) {
+      if (String(err).includes("401")) {
         showWrong();
       }
     }

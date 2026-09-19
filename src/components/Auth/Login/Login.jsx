@@ -8,9 +8,6 @@ export default function Login({ handleLogin }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  //navegacion
-  const navigate = useNavigate();
-
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
   };

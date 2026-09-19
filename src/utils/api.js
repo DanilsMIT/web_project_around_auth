@@ -1,13 +1,20 @@
 class aroundUSAPI {
-  constructor({ baseUrl, headers }) {
+  constructor({ baseUrl }) {
     this._url = baseUrl;
-    this._headers = headers;
   }
-
+  //Headers
+  get _headers() {
+    const vipToken = localStorage.getItem("jwt");
+    return {
+      authorization: `Bearer ${vipToken}`,
+      "Content-Type": "application/json",
+    };
+  }
   // Manejar respuesta
-  _checkResponse(response) {
+  async _checkResponse(response) {
     if (response.ok) {
-      return response.json();
+      const res = await response.json();
+      return res.data ? res.data : res;
     }
     return Promise.reject(`Error:${response.status}`);
   }
@@ -78,7 +85,7 @@ class aroundUSAPI {
       method: metodo,
       headers: this._headers,
     });
-    return response.json();
+    return this._checkResponse(response);
   }
 
   async cardDelete(id) {
@@ -91,11 +98,7 @@ class aroundUSAPI {
 }
 
 const API = new aroundUSAPI({
-  baseUrl: "https://around-api.es.tripleten-services.com/v1",
-  headers: {
-    authorization: "6e8faee7-cb36-424e-8723-26d1925bd141",
-    "Content-Type": "application/json",
-  },
+  baseUrl: "http://localhost:3001",
 });
 
 export default API;

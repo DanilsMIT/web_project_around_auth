@@ -1,6 +1,8 @@
 import PopUpImage from "../popup/ImagePopup/ImagePopup.jsx";
 import RemoveCard from "../popup/RemoveCard/RemoveCard.jsx";
 import placeholder from "../../images/placeholder.jpg";
+import { useContext } from "react";
+import { CurrentUserContext } from "../../contexts/CurrentUserContext.js";
 
 export default function Card({
   CardData,
@@ -8,8 +10,12 @@ export default function Card({
   onCardLike,
   onCardDelete,
 }) {
+  //Contexto
+  const { currentUser } = useContext(CurrentUserContext);
   //Atributos
-  const { name, link, isLiked } = CardData;
+  const { name, link, likes = [] } = CardData;
+  //like
+  const isLiked = likes.some((id) => id === currentUser._id);
   //editor de className
   const isLikedClass = `card__like-button ${
     isLiked ? "card__like-button_is-active" : ""

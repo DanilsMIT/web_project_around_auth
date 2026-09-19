@@ -13,7 +13,7 @@ export default function EditAvatar() {
   //funciones
   const handleInputChange = (e) => {
     setInputError(e.target.validationMessage);
-    setEmpty(e.target.value.trim() == "");
+    setEmptyInput(e.target.value.trim() == "");
   };
 
   const handleSubmit = (e) => {
